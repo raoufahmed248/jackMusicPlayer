@@ -3,6 +3,7 @@
 #define wavPlayer_h
 
 //#include "dr_wav.cpp"
+#include "dr_wav.cpp"
 #include "concurrentqueue.h"
 //template<size_t frameSize>
 class wavPlayer {
@@ -29,7 +30,7 @@ private:
     int leftChannelReserveAmount = {};
     int rightChannelReserveAmount = {};
     int currentIndex = {};
-    //drwav wav;
+    drwav wav;
     std::string filePath = {};
 
 

@@ -1,5 +1,5 @@
 #include "wavPlayer.h"
-#include "dr_wav.cpp"
+
 int wavPlayer::returnFour()
 {
     return 4;
@@ -7,8 +7,6 @@ int wavPlayer::returnFour()
 
 wavPlayer::wavPlayer(std::string wavFilePath, int queueSize, int sampleDelayBetweenPlays)
 {
-    drwav wav;
-
     if (!drwav_init_file(&wav, wavFilePath.c_str(), NULL)) {
         // Error opening WAV file.
         throw std::invalid_argument("DR_WAV COULD NOT OPEN WAV FILE!");
@@ -23,7 +21,7 @@ wavPlayer::wavPlayer(std::string wavFilePath, int queueSize, int sampleDelayBetw
 
 wavPlayer::~wavPlayer()
 {
-    //drwav_uninit(&wav);
+    drwav_uninit(&wav);
     delete leftSampleQueue;
     delete rightSampleQueue;
 }
