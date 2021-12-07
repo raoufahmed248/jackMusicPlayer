@@ -43,7 +43,80 @@ wavPlayer::~wavPlayer()
 
 int wavPlayer::decode()
 {
-    return 1;
+    size_t numFramesToFill = emptyFrameQueue->size_approx();
+
+    size_t samplesToRetrieve = samplesPerFrame;
+
+    if(wav.channels == 2)
+    {
+        samplesToRetrieve *= 2;
+    }
+
+    for(int x = 0; x < numFramesToFill; x++)
+    {
+        audioFrame poppedFrame = {};
+        if(!emptyFrameQueue->try_dequeue(poppedFrame))
+        {
+            throw std::invalid_argument("FAILED TO POP EMPTY FRAMES!");
+        }
+
+        //Fill up the preParsebuffer
+        if(currFrameDelay > 0)
+        {
+            memset(preParseBuffer, 0, samplesToRetrieve * sizeof(preParseBuffer[0]));
+            
+            currFrameDelay--;
+        }
+        else
+        {
+            size_t numOfSamplesDecoded = drwav_read_pcm_frames_f32(&wav,
+                samplesToRetrieve, preParseBuffer);
+            
+            if(numOfSamplesDecoded%2 != 0 && wav.channels == 2)
+            {
+                throw std::invalid_argument("NUM OF SAMPLES DECODED WAS NOT MULTIPLE OF TWO!");
+            }
+
+            if(numOfSamplesDecoded < samplesToRetrieve)
+            {
+                size_t remainingSamples = samplesToRetrieve - numOfSamplesDecoded;
+                memset(&preParseBuffer[numOfSamplesDecoded], 0, remainingSamples * sizeof(preParseBuffer[0]));
+                drwav_seek_to_pcm_frame(&wav, 0);
+                currFrameDelay = replayFrameDelay;
+            }
+        }
+
+        //Transfer data from preParseBuffer to audioFrame
+        if(wav.channels == 2)
+        {
+            //Parse left channel
+            int audioFrameIndex = 0;
+            for(int y = 0; y < samplesToRetrieve;y+=2)
+            {
+                poppedFrame.leftBuffer[audioFrameIndex] = preParseBuffer[y];
+                poppedFrame.rightBuffer[audioFrameIndex] = preParseBuffer[y+1];
+                audioFrameIndex++;
+            }
+            poppedFrame.size = samplesPerFrame;
+        }
+        else
+        {
+            for(int y = 0; y < samplesToRetrieve; y++)
+            {
+                poppedFrame.leftBuffer[y] = preParseBuffer[y];
+                poppedFrame.rightBuffer[y] = preParseBuffer[y];
+                
+            }
+        }
+        if(!filledFrameQueue->try_enqueue(poppedFrame))
+        {
+            throw std::invalid_argument("FAILED TO PUSH FULL FRAME!");
+        }
+
+    }
+    
+    return numFramesToFill;
+
 }
 
 int wavPlayer::getLeftRightSamples(float *leftBuffer, float *rightBuffer, int amount)

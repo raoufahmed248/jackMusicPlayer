@@ -45,7 +45,7 @@ private:
     float frameBuffers[queueSize][samplesPerFrame*2] = {};
     float leftChannelReserveBuffer[samplesPerFrame];
     float rightChannelReserveBuffer[samplesPerFrame];
-
+    float preParseBuffer[samplesPerFrame * 2];
     
 
     int leftChannelReserveAmount = {};
