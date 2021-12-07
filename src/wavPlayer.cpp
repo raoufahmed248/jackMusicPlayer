@@ -108,7 +108,7 @@ int wavPlayer::decode()
                 
             }
         }
-        if(!filledFrameQueue->try_enqueue(poppedFrame))
+        if(!filledFrameQueue->enqueue(poppedFrame))
         {
             throw std::invalid_argument("FAILED TO PUSH FULL FRAME!");
         }
@@ -139,6 +139,10 @@ int wavPlayer::getLeftRightSamples(float *leftBuffer, float *rightBuffer, int am
         size_t amountToTransfer = std::min(amount - inputBufferIndex, poppedFrame.size);
         memcpy(&leftBuffer[inputBufferIndex], poppedFrame.leftBuffer, amountToTransfer * sizeof(leftBuffer[0]));
         memcpy(&rightBuffer[inputBufferIndex], poppedFrame.rightBuffer, amountToTransfer * sizeof(rightBuffer[0]));
+        if(!emptyFrameQueue->enqueue(poppedFrame))
+        {
+            throw std::invalid_argument("FAILED TO PUSH EMPTY FRAME!");
+        }
         inputBufferIndex += amountToTransfer;
     }
 
