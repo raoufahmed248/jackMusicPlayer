@@ -17,9 +17,15 @@ wavPlayer::wavPlayer(std::string wavFilePath, int queueSize, int sampleDelayBetw
     }
     filePath = wavFilePath;
     this->queueSize = queueSize;
+    
+    leftChannelReserveBuffer.reserve(samplesPerFrame);
+    rightChannelReserveBuffer.reserve(samplesPerFrame);
+    preParseBuffer.reserve(samplesPerFrame * 2);
+    scratchBuffer.reserve(samplesPerFrame);
+    
     replayFrameDelay = sampleDelayBetweenPlays;
-    leftSampleQueue = new moodycamel::ConcurrentQueue<float[512]> (this->queueSize);
-    rightSampleQueue = new moodycamel::ConcurrentQueue<float[512]> (this->queueSize);
+    leftSampleQueue = new moodycamel::ConcurrentQueue<std::vector<float>> (this->queueSize);
+    rightSampleQueue = new moodycamel::ConcurrentQueue<std::vector<float>> (this->queueSize);
     
 
 
@@ -57,7 +63,7 @@ int wavPlayer::decode()
         else
         {
             size_t numOfSamplesDecoded = drwav_read_pcm_frames_f32(&wav,
-                samplesToParse, (float *)preParseBuffer);
+                samplesToParse, (float *)preParseBuffer.data());
             if(numOfSamplesDecoded < (samplesToParse))
             {
                 size_t remaining_samples = (samplesToParse) - numOfSamplesDecoded;
@@ -93,7 +99,7 @@ int wavPlayer::decode()
         }
         else
         {
-            memcpy(scratchBuffer, preParseBuffer, samplesToParse * sizeof(preParseBuffer[0]));
+            memcpy(scratchBuffer.data(), preParseBuffer.data(), samplesToParse * sizeof(preParseBuffer[0]));
             if(leftSampleQueue->try_enqueue(scratchBuffer))
             {
                 totalDecoded++;

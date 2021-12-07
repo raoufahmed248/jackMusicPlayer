@@ -5,6 +5,7 @@
 //#include "dr_wav.cpp"
 #include "dr_wav.cpp"
 #include "concurrentqueue.h"
+#include <vector>
 //template<size_t frameSize>
 class wavPlayer {
 public:
@@ -33,12 +34,15 @@ public:
 
 private:
     static constexpr  size_t samplesPerFrame = 512;
-    moodycamel::ConcurrentQueue<float[512]> *leftSampleQueue;
-    moodycamel::ConcurrentQueue<float[512]> *rightSampleQueue;
-    float leftChannelReserveBuffer[512] = {};
-    float rightChannelReserveBuffer[512] = {};
-    float preParseBuffer[512*2] = {};
-    float scratchBuffer[512] = {};
+    moodycamel::ConcurrentQueue<std::vector<float>> *leftSampleQueue;
+    moodycamel::ConcurrentQueue<std::vector<float>> *rightSampleQueue;
+    
+    std::vector<float> leftChannelReserveBuffer;
+    std::vector<float> rightChannelReserveBuffer;
+
+    std::vector<float> preParseBuffer;
+    std::vector<float> scratchBuffer;
+
     int leftChannelReserveAmount = {};
     int rightChannelReserveAmount = {};
     int currentIndex = {};
