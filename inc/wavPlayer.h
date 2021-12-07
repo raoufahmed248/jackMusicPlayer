@@ -6,6 +6,7 @@
 #include "dr_wav.cpp"
 #include "concurrentqueue.h"
 #include <vector>
+#include <algorithm>  
 //template<size_t frameSize>
 class wavPlayer {
 public:
@@ -28,7 +29,7 @@ public:
 
     //Retrieve samples from left and right channels.
     //NOTE:THIS FUNCTION NEEDS TO ENSURE THERE ARE SAMPLES FOR BOTH LEFT AND RIGHT,OTHERWISE SEND 0's
-    int getLeftRightSamples(void *leftBuffer, void *rightBuffer, int amount);
+    int getLeftRightSamples(float *leftBuffer, float *rightBuffer, int amount);
     int getLeftFrame(void *buffer, int amount);
     int getRightFrame(void *buffer, int amount);
 
@@ -42,9 +43,14 @@ private:
 
     std::vector<float> preParseBuffer;
     std::vector<float> scratchBuffer;
+    std::vector<float> offloadingBuffer;
+    
 
     int leftChannelReserveAmount = {};
+    int leftChannelReserveIndex = {};
     int rightChannelReserveAmount = {};
+    int rightChannelReserveIndex = {};
+
     int currentIndex = {};
     drwav wav;
     std::string filePath = {};

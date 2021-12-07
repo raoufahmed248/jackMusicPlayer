@@ -22,6 +22,7 @@ wavPlayer::wavPlayer(std::string wavFilePath, int queueSize, int sampleDelayBetw
     rightChannelReserveBuffer.reserve(samplesPerFrame);
     preParseBuffer.reserve(samplesPerFrame * 2);
     scratchBuffer.reserve(samplesPerFrame);
+    offloadingBuffer.reserve(samplesPerFrame);
     
     replayFrameDelay = sampleDelayBetweenPlays;
     leftSampleQueue = new moodycamel::ConcurrentQueue<std::vector<float>> (this->queueSize);
@@ -113,4 +114,71 @@ int wavPlayer::decode()
         }
     }
     return totalDecoded;
+}
+
+int wavPlayer::getLeftRightSamples(float *leftBuffer, float *rightBuffer, int amount)
+{
+    size_t leftIndex = {};
+    size_t rightIndex = {};
+    
+    if(leftChannelReserveAmount != rightChannelReserveAmount)
+    {
+        leftChannelReserveAmount = 0;
+        rightChannelReserveAmount = 0;
+        leftChannelReserveIndex = 0;
+        rightChannelReserveIndex = 0;
+    }
+
+    size_t amountFromReserve = std::min(leftChannelReserveAmount, amount);
+
+    memcpy(leftBuffer, &leftChannelReserveBuffer[leftChannelReserveIndex], amountFromReserve * sizeof(leftChannelReserveBuffer[0]));
+    memcpy(rightBuffer, &rightChannelReserveBuffer[rightChannelReserveIndex], amountFromReserve * sizeof(rightChannelReserveBuffer[0]));
+    
+    leftChannelReserveAmount -= amountFromReserve;
+    rightChannelReserveAmount -= amountFromReserve;
+    leftChannelReserveIndex += amountFromReserve;
+    rightChannelReserveIndex += amountFromReserve;
+    leftIndex += amountFromReserve;
+    rightIndex += amountFromReserve;
+
+    if(leftChannelReserveAmount == 0)
+    {
+        leftChannelReserveIndex = 0;
+        rightChannelReserveIndex = 0;
+    }
+
+    amount -= amountFromReserve;
+    
+    if(amount == 0)
+    {
+        return amountFromReserve;
+    }
+
+    size_t numOfFramesToDecode = ((amount -1) / samplesPerFrame) + 1;
+
+    if((leftSampleQueue->size_approx() < numOfFramesToDecode) || (rightSampleQueue->size_approx() < numOfFramesToDecode))
+    {
+        memset(&leftBuffer[leftIndex], 0, amount * sizeof(leftBuffer[0]));
+        memset(&rightBuffer[leftIndex], 0, amount * sizeof(rightBuffer[0]));
+        return amount + amountFromReserve;
+    }
+
+    for(int x = 0; x < numOfFramesToDecode; x++)
+    {
+        leftSampleQueue->try_dequeue(offloadingBuffer);
+        size_t amountToCopy = std::min(amount, (int)samplesPerFrame);
+        memcpy(&leftBuffer[leftIndex], offloadingBuffer.data(), amountToCopy * sizeof(leftBuffer[0]));
+        
+        rightSampleQueue->try_dequeue(offloadingBuffer);
+        memcpy(&rightBuffer[rightIndex], offloadingBuffer.data(), amountToCopy * sizeof(rightBuffer[0]));
+
+        rightIndex += amountToCopy;
+        leftIndex += amountToCopy;
+        amount -= amountToCopy;
+
+
+
+    }
+    return leftIndex;
+
 }
