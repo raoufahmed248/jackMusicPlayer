@@ -121,6 +121,34 @@ int wavPlayer::decode()
 
 int wavPlayer::getLeftRightSamples(float *leftBuffer, float *rightBuffer, int amount)
 {
-    return 1;
+
+    size_t numOfFramesToDecode = ((amount -1) / samplesPerFrame) + 1;
+    size_t filledFrameNum = filledFrameQueue->size_approx();
+
+    size_t framesToPop = std::min(numOfFramesToDecode, filledFrameNum);
+
+    size_t inputBufferIndex = 0;
+
+    for(int x = 0; x < framesToPop; x++)
+    {
+        audioFrame poppedFrame = {};
+        if(!filledFrameQueue->try_dequeue(poppedFrame))
+        {
+            throw std::invalid_argument("FAILED TO POP FILLED FRAMES!");
+        }
+        size_t amountToTransfer = std::min(amount - inputBufferIndex, poppedFrame.size);
+        memcpy(&leftBuffer[inputBufferIndex], poppedFrame.leftBuffer, amountToTransfer * sizeof(leftBuffer[0]));
+        memcpy(&rightBuffer[inputBufferIndex], poppedFrame.rightBuffer, amountToTransfer * sizeof(rightBuffer[0]));
+        inputBufferIndex += amountToTransfer;
+    }
+
+    if(inputBufferIndex < amount)
+    {
+        memset(&leftBuffer[inputBufferIndex], 0, (amount-inputBufferIndex)*sizeof(leftBuffer[0]));
+        memset(&rightBuffer[inputBufferIndex], 0, (amount-inputBufferIndex)*sizeof(rightBuffer[0]));
+        inputBufferIndex += amount-inputBufferIndex;
+    }    
+
+    return inputBufferIndex;
 
 }
