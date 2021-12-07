@@ -5,13 +5,14 @@
 //#include "dr_wav.cpp"
 #include "dr_wav.cpp"
 #include "concurrentqueue.h"
+#include "wavPlayerTypes.h"
 #include <vector>
 #include <algorithm>  
 //template<size_t frameSize>
 class wavPlayer {
 public:
     int returnFour();
-    wavPlayer(std::string wavFilePath, int queueSize, int delayBetweenPlays);
+    wavPlayer(std::string wavFilePath, int sampleDelayBetweenPlays);
     ~wavPlayer();
     // Begin parsing frames until queueSize is reached, returns frames parsed
     int decode();
@@ -35,15 +36,16 @@ public:
 
 private:
     static constexpr  size_t samplesPerFrame = 512;
-    moodycamel::ConcurrentQueue<std::vector<float>> *leftSampleQueue;
-    moodycamel::ConcurrentQueue<std::vector<float>> *rightSampleQueue;
+    static constexpr  size_t queueSize = 10;
     
-    std::vector<float> leftChannelReserveBuffer;
-    std::vector<float> rightChannelReserveBuffer;
+    moodycamel::ConcurrentQueue<audioFrame> *emptyFrameQueue;
+    moodycamel::ConcurrentQueue<audioFrame> *filledFrameQueue;
+    
 
-    std::vector<float> preParseBuffer;
-    std::vector<float> scratchBuffer;
-    std::vector<float> offloadingBuffer;
+    float frameBuffers[queueSize][samplesPerFrame*2] = {};
+    float leftChannelReserveBuffer[samplesPerFrame];
+    float rightChannelReserveBuffer[samplesPerFrame];
+
     
 
     int leftChannelReserveAmount = {};
@@ -57,6 +59,5 @@ private:
 
     size_t replayFrameDelay = {};
     size_t currFrameDelay = {};
-    size_t queueSize = {};
 };
 #endif  

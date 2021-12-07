@@ -8,7 +8,7 @@ TEST(HelloTest, BasicAssertions) {
   EXPECT_STRNE("hello", "world");
   // Expect equality.
   EXPECT_EQ(7 * 6, 42);
-  wavPlayer test("test.wav",10,10);
+  wavPlayer test("test.wav",0);
   EXPECT_EQ(test.returnFour(), 4);
   
 }
