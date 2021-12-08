@@ -4,7 +4,8 @@
 
 //#include "dr_wav.cpp"
 #include "dr_wav.cpp"
-#include "concurrentqueue.h"
+#include "readerwriterqueue.h"
+#include "atomicops.h"
 #include "wavPlayerTypes.h"
 #include <vector>
 #include <algorithm>  
@@ -38,8 +39,8 @@ private:
     static constexpr  size_t samplesPerFrame = 512;
     static constexpr  size_t queueSize = 10;
     
-    moodycamel::ConcurrentQueue<audioFrame> *emptyFrameQueue;
-    moodycamel::ConcurrentQueue<audioFrame> *filledFrameQueue;
+    moodycamel::ReaderWriterQueue<audioFrame> *emptyFrameQueue;
+    moodycamel::ReaderWriterQueue<audioFrame> *filledFrameQueue;
     
 
     float frameBuffers[queueSize][samplesPerFrame*2] = {};

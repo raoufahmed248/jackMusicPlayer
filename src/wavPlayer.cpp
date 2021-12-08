@@ -1,5 +1,6 @@
 #include "wavPlayer.h"
-
+#include <stdio.h>
+#include <iostream>
 int wavPlayer::returnFour()
 {
     return 4;
@@ -19,8 +20,8 @@ wavPlayer::wavPlayer(std::string wavFilePath, int sampleDelayBetweenPlays)
     
     replayFrameDelay = sampleDelayBetweenPlays;
     
-    emptyFrameQueue = new moodycamel::ConcurrentQueue<audioFrame> (queueSize);
-    filledFrameQueue = new moodycamel::ConcurrentQueue<audioFrame> (queueSize);
+    emptyFrameQueue = new moodycamel::ReaderWriterQueue<audioFrame> (queueSize);
+    filledFrameQueue = new moodycamel::ReaderWriterQueue<audioFrame> (queueSize);
     audioFrame tempFrame = {};
     for(int x = 0; x < queueSize; x++)
     {
@@ -31,7 +32,7 @@ wavPlayer::wavPlayer(std::string wavFilePath, int sampleDelayBetweenPlays)
         {
             throw std::invalid_argument("FAILED TO ADD INITIAL FRAMES TO EMPTY QUEUE!");
         }
-    }
+    }   
 }
 
 wavPlayer::~wavPlayer()
@@ -108,8 +109,10 @@ int wavPlayer::decode()
                 
             }
         }
-        if(!filledFrameQueue->enqueue(poppedFrame))
+       
+        if(!filledFrameQueue->try_enqueue(poppedFrame))
         {
+            
             throw std::invalid_argument("FAILED TO PUSH FULL FRAME!");
         }
 
@@ -139,7 +142,7 @@ int wavPlayer::getLeftRightSamples(float *leftBuffer, float *rightBuffer, int am
         size_t amountToTransfer = std::min(amount - inputBufferIndex, poppedFrame.size);
         memcpy(&leftBuffer[inputBufferIndex], poppedFrame.leftBuffer, amountToTransfer * sizeof(leftBuffer[0]));
         memcpy(&rightBuffer[inputBufferIndex], poppedFrame.rightBuffer, amountToTransfer * sizeof(rightBuffer[0]));
-        if(!emptyFrameQueue->enqueue(poppedFrame))
+        if(!emptyFrameQueue->try_enqueue(poppedFrame))
         {
             throw std::invalid_argument("FAILED TO PUSH EMPTY FRAME!");
         }
